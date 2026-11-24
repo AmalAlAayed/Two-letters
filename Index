@@ -1,0 +1,1365 @@
+
+
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مسابقة آخر حرفين — تحدي الفريقين</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Cairo', 'sans-serif'] },
+          colors: {
+            team1: { light: '#38bdf8', DEFAULT: '#0284c7', dark: '#0369a1' },
+            team2: { light: '#fb923c', DEFAULT: '#ea580c', dark: '#c2410c' },
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: radial-gradient(circle at top right, #0f172a, #020617 75%);
+      color: #f8fafc;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .glass-panel {
+      background: rgba(30, 41, 59, 0.72);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.6);
+    }
+    .letter-card { transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .letter-card:hover:not(:disabled) {
+      transform: translateY(-4px) scale(1.03);
+      border-color: #38bdf8;
+      box-shadow: 0 12px 24px -8px rgba(56, 189, 248, 0.35);
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.85); opacity: 0; }
+      70% { transform: scale(1.04); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop { animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    }
+    .solved-row { animation: pulseGlow 0.8s ease-out; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body class="antialiased selection:bg-sky-500 selection:text-white">
+
+  <header class="sticky top-0 z-40 glass-panel border-b border-slate-700/60 px-4 py-3">
+    <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center font-black text-xl shadow-lg shadow-sky-500/20">
+          ٢
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-white leading-tight">مسابقة آخر حرفين</h1>
+          <p id="header-subtitle" class="text-xs text-slate-400">تحدي السرعة والذكاء بين فريقين</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="sound-toggle-btn" title="تفعيل/كتم الصوت" class="p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-200 transition">
+          <svg id="sound-on-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+          </svg>
+          <svg id="sound-off-icon" class="w-5 h-5 hidden text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+          </svg>
+        </button>
+        <button id="home-btn" class="hidden px-3 py-2 rounded-xl bg-slate-800/90 hover:bg-rose-950/70 hover:text-rose-300 border border-slate-700 text-xs sm:text-sm font-bold text-slate-300 transition">
+‎          خروج / القائمة
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div id="toast-container" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-[90%] max-w-md pointer-events-none"></div>
+
+  <main class="max-w-5xl mx-auto px-4 py-6 sm:py-8">
+
+    <section id="screen-setup" class="animate-pop max-w-2xl mx-auto">
+      <div class="glass-panel rounded-3xl p-6 sm:p-8">
+        <div class="text-center mb-7">
+          <span class="inline-block px-3.5 py-1 rounded-full bg-sky-500/15 border border-sky-400/30 text-sky-300 text-xs font-bold mb-3">
+‎            ١٦ مجموعة حروف • أكثر من ١٣٠ سؤالاً
+          </span>
+          <h2 class="text-2xl sm:text-3xl font-black text-white mb-2">أهلاً بكم في مسابقة آخر حرفين!</h2>
+          <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+‎            اختاروا الحرفين اللذين تنتهي بهما جميع الإجابات، وتسابقوا في حل الأسئلة بأسرع وقت ممكن.
+          </p>
+        </div>
+
+        <div class="mb-6">
+          <label class="block text-sm font-bold text-slate-300 mb-2.5">اختر طريقة اللعب:</label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button type="button" id="mode-online-btn" class="mode-selector active flex flex-col items-start p-4 rounded-2xl border-2 border-sky-500 bg-sky-500/10 text-right transition">
+              <div class="flex items-center justify-between w-full mb-1">
+                <span class="font-extrabold text-white text-base">🌐 لعب مباشر (جهازين)</span>
+                <span class="w-3 h-3 rounded-full bg-sky-400 shadow-sm shadow-sky-400"></span>
+              </div>
+              <p class="text-xs text-slate-300">أنشئ غرفة وشارك الرابط أو الرمز مع الفريق المنافس لسباق حي في نفس اللحظة.</p>
+            </button>
+            <button type="button" id="mode-local-btn" class="mode-selector flex flex-col items-start p-4 rounded-2xl border-2 border-slate-700 bg-slate-800/60 hover:border-slate-500 text-right transition">
+              <div class="flex items-center justify-between w-full mb-1">
+                <span class="font-extrabold text-white text-base">📱 لعب سريع (نفس الجهاز)</span>
+                <span class="w-3 h-3 rounded-full bg-slate-600"></span>
+              </div>
+              <p class="text-xs text-slate-400">يتناوب الفريقان على نفس الجهاز، ويُحسب الزمن الدقيق لكل فريق لتحديد الفائز.</p>
+            </button>
+          </div>
+        </div>
+
+        <div id="online-setup-box" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="p-4 rounded-2xl bg-slate-900/70 border border-slate-700/80 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 text-xs font-bold">الفريق الأول</span>
+                  <h3 class="font-bold text-white text-base">إنشاء غرفة جديدة</h3>
+                </div>
+                <label class="block text-xs text-slate-400 mb-1">اسم فريقكم:</label>
+                <input id="create-team-name" type="text" value="الفريق الأول" maxlength="24" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white font-bold focus:outline-none focus:border-sky-400 mb-3" />
+              </div>
+              <button id="create-room-btn" class="w-full py-3 px-4 rounded-xl bg-gradient-to-l from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold shadow-lg shadow-sky-600/25 transition active:scale-95">
+‎                إنشاء غرفة ومشاركة الرابط
+              </button>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-slate-900/70 border border-slate-700/80 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="px-2 py-0.5 rounded-md bg-orange-500/20 text-orange-300 text-xs font-bold">الفريق الثاني</span>
+                  <h3 class="font-bold text-white text-base">الانضمام لغرفة</h3>
+                </div>
+                <label class="block text-xs text-slate-400 mb-1">اسم فريقكم:</label>
+                <input id="join-team-name" type="text" value="الفريق الثاني" maxlength="24" class="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-600 text-white font-bold focus:outline-none focus:border-orange-400 mb-2" />
+                <label class="block text-xs text-slate-400 mb-1">رمز الغرفة (4 أرقام أو أحرف):</label>
+                <input id="join-room-code" type="text" placeholder="مثال: 4829" maxlength="6" class="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-600 text-white font-extrabold tracking-widest text-center uppercase focus:outline-none focus:border-orange-400 mb-3" />
+              </div>
+              <button id="join-room-btn" class="w-full py-3 px-4 rounded-xl bg-gradient-to-l from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 text-white font-extrabold shadow-lg shadow-orange-600/25 transition active:scale-95">
+‎                دخول الغرفة الآن
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="local-setup-box" class="hidden space-y-4">
+          <div class="p-4 rounded-2xl bg-slate-900/70 border border-slate-700/80 space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-sky-300 mb-1">اسم الفريق الأول:</label>
+                <input id="local-team1-name" type="text" value="الفريق الأول" maxlength="24" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-sky-500/50 text-white font-bold focus:outline-none focus:border-sky-400" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-orange-300 mb-1">اسم الفريق الثاني:</label>
+                <input id="local-team2-name" type="text" value="الفريق الثاني" maxlength="24" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-orange-500/50 text-white font-bold focus:outline-none focus:border-orange-400" />
+              </div>
+            </div>
+            <button id="start-local-btn" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-l from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-base shadow-lg shadow-emerald-600/25 transition active:scale-95">
+‎              ابدأ التحدي المحلي
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-lobby" class="hidden animate-pop space-y-6">
+      <div class="glass-panel rounded-3xl p-5 sm:p-6">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4 pb-5 border-b border-slate-700/70">
+          <div class="flex items-center justify-center sm:justify-start gap-3 sm:gap-5 w-full md:w-auto">
+            <div class="flex-1 sm:flex-initial text-center px-4 py-2.5 rounded-2xl bg-sky-950/60 border border-sky-500/40">
+              <div class="text-xs text-sky-300 font-bold mb-0.5">الفريق الأول</div>
+              <div id="lobby-t1-name" class="font-extrabold text-white text-sm sm:text-base truncate max-w-[130px]">الفريق الأول</div>
+              <div id="lobby-t1-score" class="text-2xl font-black text-sky-400 mt-0.5">0</div>
+            </div>
+            <div class="text-slate-500 font-black text-lg">VS</div>
+            <div class="flex-1 sm:flex-initial text-center px-4 py-2.5 rounded-2xl bg-orange-950/60 border border-orange-500/40">
+              <div class="text-xs text-orange-300 font-bold mb-0.5">الفريق الثاني</div>
+              <div id="lobby-t2-name" class="font-extrabold text-white text-sm sm:text-base truncate max-w-[130px]">في الانتظار...</div>
+              <div id="lobby-t2-score" class="text-2xl font-black text-orange-400 mt-0.5">0</div>
+            </div>
+          </div>
+
+          <div id="room-share-box" class="w-full md:w-auto flex flex-col sm:flex-row items-center gap-2.5 bg-slate-900/90 p-3 rounded-2xl border border-slate-700">
+            <div class="text-center sm:text-right px-2">
+              <span class="block text-[11px] text-slate-400">رمز الغرفة للمنافس</span>
+              <span id="display-room-code" class="text-xl font-black tracking-widest text-amber-400">----</span>
+            </div>
+            <button id="copy-link-btn" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition active:scale-95">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+‎              نسخ رابط الدعوة
+            </button>
+          </div>
+        </div>
+
+        <div id="lobby-status-banner" class="mt-4 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm font-bold text-center">
+‎          شارك رابط الغرفة أو الرمز مع الفريق الثاني، أو اختر الحرفين لبدء التحدي!
+        </div>
+      </div>
+
+      <div class="glass-panel rounded-3xl p-5 sm:p-6">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
+          <div>
+            <h3 class="text-xl font-extrabold text-white">اختر الحرفين للجولة</h3>
+            <p class="text-xs sm:text-sm text-slate-400">جميع إجابات الجولة ستنتهي بالحرفين اللذين تختارهما</p>
+          </div>
+          <button id="random-letters-btn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs sm:text-sm font-bold text-sky-300 transition">
+‎            🎲 اختيار عشوائي
+          </button>
+        </div>
+        <div id="letters-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4"></div>
+      </div>
+    </section>
+
+    <section id="screen-countdown" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4">
+      <div class="text-center animate-pop">
+        <p id="countdown-team-label" class="text-lg sm:text-xl font-bold text-sky-300 mb-2">استعدوا للتحدي!</p>
+        <div class="inline-block px-6 py-2 rounded-2xl bg-slate-800/90 border border-slate-600 mb-6">
+          <span class="text-sm text-slate-400 block">الحرفان المختاران</span>
+          <span id="countdown-letters" class="text-3xl sm:text-4xl font-black text-amber-400">- ا ج</span>
+        </div>
+        <div id="countdown-number" class="text-8xl sm:text-9xl font-black text-white drop-shadow-[0_0_30px_rgba(56,189,248,0.6)]">3</div>
+      </div>
+    </section>
+
+    <section id="screen-game" class="hidden animate-pop space-y-5">
+      <div class="glass-panel rounded-3xl p-4 sm:p-5 sticky top-[68px] z-30 border-slate-600/50">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div class="flex items-center gap-3">
+            <div class="px-4 py-1.5 rounded-2xl bg-amber-500/20 border border-amber-400/40 text-center">
+              <span class="text-[11px] text-amber-200 block font-bold">تنتهي بـ</span>
+              <span id="game-active-letters" class="text-xl sm:text-2xl font-black text-amber-400">- ا ج</span>
+            </div>
+            <div>
+              <span id="current-turn-badge" class="inline-block px-2.5 py-0.5 rounded-md bg-sky-500/20 text-sky-300 text-xs font-bold mb-0.5">جاري السباق</span>
+              <h3 id="game-prompt-title" class="text-sm sm:text-base font-extrabold text-white">اكتب الإجابة في الخانات بأسرع وقت!</h3>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 bg-slate-900/90 px-4 py-2 rounded-2xl border border-slate-700">
+            <svg class="w-5 h-5 text-emerald-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span id="game-timer" class="text-xl sm:text-2xl font-black font-mono text-white">00:00</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div id="p1-progress-card" class="p-3 rounded-2xl bg-slate-900/80 border border-sky-500/40">
+            <div class="flex justify-between items-center text-xs font-bold mb-1.5">
+              <span id="game-t1-name" class="text-sky-300 truncate max-w-[150px]">الفريق الأول</span>
+              <span id="game-t1-count" class="text-white">0 / 8</span>
+            </div>
+            <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+              <div id="game-t1-bar" class="h-full bg-gradient-to-l from-sky-400 to-blue-600 transition-all duration-300 rounded-full" style="width: 0%"></div>
+            </div>
+          </div>
+          <div id="p2-progress-card" class="p-3 rounded-2xl bg-slate-900/80 border border-orange-500/40">
+            <div class="flex justify-between items-center text-xs font-bold mb-1.5">
+              <span id="game-t2-name" class="text-orange-300 truncate max-w-[150px]">الفريق الثاني</span>
+              <span id="game-t2-count" class="text-white">0 / 8</span>
+            </div>
+            <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+              <div id="game-t2-bar" class="h-full bg-gradient-to-l from-orange-400 to-amber-600 transition-all duration-300 rounded-full" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="questions-list" class="space-y-3 pb-10"></div>
+    </section>
+
+    <section id="screen-results" class="hidden animate-pop max-w-2xl mx-auto">
+      <div class="glass-panel rounded-3xl p-6 sm:p-8 text-center">
+        <div class="w-20 h-20 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-4xl shadow-xl shadow-amber-500/30">🏆</div>
+        <span class="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold mb-2">انتهت الجولة!</span>
+        <h2 id="winner-headline" class="text-2xl sm:text-4xl font-black text-white mb-2">فاز الفريق الأول!</h2>
+        <p id="winner-subtext" class="text-slate-300 text-sm sm:text-base mb-6">أنهى جميع الأسئلة في زمن قياسي!</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 text-right">
+          <div id="res-t1-box" class="p-4 rounded-2xl bg-slate-900/80 border-2 border-sky-500/50">
+            <div class="flex items-center justify-between mb-1">
+              <span id="res-t1-name" class="font-extrabold text-sky-300">الفريق الأول</span>
+              <span id="res-t1-badge" class="text-xs px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold">النتيجة</span>
+            </div>
+            <div id="res-t1-time" class="text-2xl font-black text-white font-mono">00:00</div>
+            <div id="res-t1-solved" class="text-xs text-slate-400 mt-1">أجاب على 8 من 8</div>
+          </div>
+          <div id="res-t2-box" class="p-4 rounded-2xl bg-slate-900/80 border-2 border-orange-500/50">
+            <div class="flex items-center justify-between mb-1">
+              <span id="res-t2-name" class="font-extrabold text-orange-300">الفريق الثاني</span>
+              <span id="res-t2-badge" class="text-xs px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 font-bold">النتيجة</span>
+            </div>
+            <div id="res-t2-time" class="text-2xl font-black text-white font-mono">00:00</div>
+            <div id="res-t2-solved" class="text-xs text-slate-400 mt-1">أجاب على 6 من 8</div>
+          </div>
+        </div>
+
+        <div class="mb-6 text-right">
+          <button id="toggle-answers-btn" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs sm:text-sm font-bold text-slate-200 flex items-center justify-between transition">
+            <span>📖 عرض جميع أسئلة وإجابات هذه الجولة</span>
+            <span>▼</span>
+          </button>
+          <div id="round-answers-review" class="hidden mt-3 max-h-60 overflow-y-auto rounded-2xl bg-slate-900/90 border border-slate-700 p-3 space-y-2 text-sm"></div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button id="next-round-btn" class="flex-1 py-3.5 px-6 rounded-xl bg-gradient-to-l from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-base shadow-lg shadow-emerald-600/25 transition active:scale-95">
+‎            اختيار حرفين لجولة جديدة 🚀
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // ==========================================
+‎    // 1. قاعدة بيانات الأسئلة الـ 16
+    // ==========================================
+    const QUIZ_GROUPS = [
+      { id: 'aj', suffix: 'اج', display: '- ا ج', items: [
+        { q: 'إذا تحرك البحر', a: ['أمواج', 'امواج'] },
+        { q: 'من الحيوانات', a: ['دجاج'] },
+        { q: 'يطلق على الرجل الفقير', a: ['محتاج'] },
+        { q: 'يحتاج إليه المريض', a: ['علاج'] },
+        { q: 'الأبنية الطويلة تسمى', a: ['أبراج', 'ابراج'] },
+        { q: 'إطلاق السجين وإخلاء سبيله', a: ['إفراج', 'افراج'] },
+        { q: 'مرادف استنباط', a: ['استنتاج'] },
+        { q: 'تدليك الجسم', a: ['مساج'] },
+        { q: 'قدوم مجموعة كبيرة من الناس', a: ['أفواج', 'افواج'] }
+      ]},
+      { id: 'am', suffix: 'ام', display: '- ا م', items: [
+        { q: 'من ٣، ٢، ١', a: ['الأرقام', 'ارقام', 'الارقام'] },
+        { q: 'ضد الحلال', a: ['الحرام', 'حرام'] },
+        { q: 'الإمساك عن الطعام والشراب', a: ['الصيام', 'صيام'] },
+        { q: 'وصول الهدف، وبلوغ الـ', a: ['مرام'] },
+        { q: 'موجودة في مصر', a: ['الأهرام', 'اهرام', 'الاهرام'] },
+        { q: 'من وحدات القياس', a: ['جرام', 'غـرام', 'غرام'] },
+        { q: 'من أنواع الأرضيات', a: ['رخام'] },
+        { q: 'عندما تلتقي بشخص تقول', a: ['السلام', 'سلام'] },
+        { q: 'من أنواع الفاكهة', a: ['شمام'] }
+      ]},
+      { id: 'an', suffix: 'ان', display: '- ا ن', items: [
+        { q: 'شاعر الرسول ﷺ', a: ['حسان'] },
+        { q: 'مثنى كتاب', a: ['كتابان'] },
+        { q: 'قوله تعالى: ﴿كُلُّ مَنْ عَلَيْهَا ...﴾', a: ['فان'] },
+        { q: 'من الحيوانات', a: ['حصان'] },
+        { q: 'أعلى مراتب الإسلام', a: ['الإحسان', 'احسان', 'الاحسان'] },
+        { q: 'من الأحجار الكريمة اللؤلؤ و', a: ['المرجان', 'مرجان'] },
+        { q: 'من أنواع السيارات', a: ['نيسان', 'فان'] },
+        { q: 'أول ركن من أركان الإسلام', a: ['الشهادتان', 'شهادتان'] },
+        { q: 'ضد شجاع', a: ['جبان'] },
+        { q: 'من الفواكه', a: ['رمان'] }
+      ]},
+      { id: 'yn', suffix: 'ين', display: '- ي ن', items: [
+        { q: 'الشيء الغالي', a: ['ثمين'] },
+        { q: 'من الدول', a: ['الفلبين', 'فلبين'] },
+        { q: 'وقود السيارة', a: ['بنزين'] },
+        { q: 'جمع ميدان', a: ['ميادين'] },
+        { q: 'من أنواع الزهور', a: ['ياسمين'] },
+        { q: 'ضد سعيد', a: ['حزين'] },
+        { q: 'النظام المتكرر', a: ['روتين'] },
+        { q: '٢٥ + ٢٥ =', a: ['خمسين'] },
+        { q: 'ما يُرى به', a: ['عين'] },
+        { q: 'بمعنى بدين', a: ['سمين'] }
+      ]},
+      { id: 'ak', suffix: 'اك', display: '- ا ك', items: [
+        { q: 'يستخدم لتنظيف الأسنان', a: ['سواك', 'مسواك'] },
+        { q: 'بمعنى شجار وخصام', a: ['عراك'] },
+        { q: 'يأكله الأطفال', a: ['سيريلاك'] },
+        { q: 'تنتقل الكهرباء للبيوت عبر', a: ['أسلاك', 'اسلاك'] },
+        { q: 'ما يُستخرج منه السواك', a: ['أراك', 'اراك'] },
+        { q: 'تعيش في البحر', a: ['الأسماك', 'اسماك', 'الاسماك'] }
+      ]},
+      { id: 'ykh', suffix: 'يخ', display: '- ي خ', items: [
+        { q: 'من الفواكه الصيفية', a: ['بطيخ'] },
+        { q: 'ما حدث في الماضي', a: ['تاريخ'] },
+        { q: 'التأنيب واللوم', a: ['توبيخ'] },
+        { q: 'جمع صاروخ', a: ['صواريخ'] },
+        { q: 'من الكواكب', a: ['مريخ'] },
+        { q: 'الرجل الكبير في السن', a: ['شيخ'] }
+      ]},
+      { id: 'lm', suffix: 'لم', display: '- ل م', items: [
+        { q: 'مرادف راية', a: ['علم'] },
+        { q: 'نكتب به', a: ['قلم'] },
+        { q: 'ضد العدل', a: ['الظلم', 'ظلم'] },
+        { q: 'الشخص الهادئ', a: ['المسالم', 'مسالم'] },
+        { q: 'تصعد إلى الأعلى بـ', a: ['السلم', 'سلم'] },
+        { q: 'بمعنى مدرس', a: ['معلم'] },
+        { q: 'ما تراه في منامك', a: ['حلم'] }
+      ]},
+      { id: 'yl', suffix: 'يل', display: '- ي ل', items: [
+        { q: 'من الأشكال الهندسية', a: ['مستطيل'] },
+        { q: 'ضد النهار', a: ['الليل', 'ليل'] },
+        { q: 'معقود في نواصيها الخير', a: ['الخيل', 'خيل'] },
+        { q: 'من محافظات المنطقة الشرقية', a: ['الجبيل', 'جبيل'] },
+        { q: 'من الحيوانات', a: ['فيل'] },
+        { q: 'صوت الخيل', a: ['صهيل'] },
+        { q: 'ضبط الحروف بالحركات يسمى', a: ['تشكيل'] }
+      ]},
+      { id: 'wr', suffix: 'ور', display: '- و ر', items: [
+        { q: 'ضد الظلام', a: ['نور'] },
+        { q: 'من الطيور المغردة الصغيرة', a: ['عصفور'] },
+        { q: 'جمع زهرة', a: ['زهور'] },
+        { q: 'ما يحيط بالمدينة أو الحديقة لحمايتها', a: ['سور'] },
+        { q: 'بمعنى فرح وبهجة', a: ['سرور'] },
+        { q: 'طعام يُتناول قبل الفجر في رمضان', a: ['سحور'] }
+      ]},
+      { id: 'ab', suffix: 'اب', display: '- ا ب', items: [
+        { q: 'نفتحه لندخل إلى المنزل أو الغرفة', a: ['باب'] },
+        { q: 'نقرأ فيه ونتعلم منه', a: ['كتاب'] },
+        { q: 'ما يتجمع في السماء ويحمل المطر', a: ['سحاب'] },
+        { q: 'ضد الثواب', a: ['عقاب'] },
+        { q: 'من الحيوانات المفترسة الماكرة', a: ['ذئاب', 'ذئب'] },
+        { q: 'ما يغطي الأرض في الصحراء', a: ['تراب'] },
+        { q: 'مرحلة العمر بين الطفولة والكهولة', a: ['شباب'] },
+        { q: 'ردّك على السؤال يسمى', a: ['جواب'] }
+      ]},
+      { id: 'ar', suffix: 'ار', display: '- ا ر', items: [
+        { q: 'تُشعل للتدفئة والطهي', a: ['نار'] },
+        { q: 'أداة تُستخدم لقطع الخشب', a: ['منشار'] },
+        { q: 'ضد الليل', a: ['نهار'] },
+        { q: 'جمع شجرة', a: ['أشجار', 'اشجار'] },
+        { q: 'من يسكن بجوار منزلك', a: ['جار'] },
+        { q: 'وسيلة نقل تسير على القضبان', a: ['قطار'] },
+        { q: 'حفرة عميقة في الأرض يُستخرج منها الماء', a: ['آبار', 'ابار'] }
+      ]},
+      { id: 'wn', suffix: 'ون', display: '- و ن', items: [
+        { q: 'فاكهة حمضية صفراء اللون', a: ['ليمون'] },
+        { q: 'كوكب أزرق من كواكب المجموعة الشمسية', a: ['نبتون'] },
+        { q: 'يُنفخ بالهواء في الحفلات للزينة', a: ['بالون'] },
+        { q: 'من التوابل الشهيرة', a: ['كمون'] },
+        { q: 'شجرة مباركة ذُكرت في القرآن الكريم', a: ['زيتون'] },
+        { q: 'من أسماء الحوت في القرآن الكريم', a: ['نون'] },
+        { q: 'جهاز نستخدمه للاتصال والتواصل', a: ['تلفون', 'تليفون'] }
+      ]},
+      { id: 'al', suffix: 'ال', display: '- ا ل', items: [
+        { q: 'جمع جبل', a: ['جبال'] },
+        { q: 'من أشهر الحيوانات الصحراوية', a: ['جمال'] },
+        { q: 'ضد القبح', a: ['جمال'] },
+        { q: 'ما يظهر خلف الجسم عند تعرضه للضوء', a: ['ظلال'] },
+        { q: 'من الاتجاهات الأربعة الرئيسية', a: ['شمال'] },
+        { q: 'ما يرتديه الرجل العربي على رأسه فوق الغترة', a: ['عقال'] },
+        { q: 'الاستفهام عن شيء مجهول يسمى', a: ['سؤال'] }
+      ]},
+      { id: 'yr', suffix: 'ير', display: '- ي ر', items: [
+        { q: 'ضد الشر', a: ['خير'] },
+        { q: 'ضد الكبير', a: ['صغير'] },
+        { q: 'ما ننام عليه في غرفة النوم', a: ['سرير'] },
+        { q: 'مشروب يُستخرج من الفواكه', a: ['عصير'] },
+        { q: 'الشخص الذي لا يملك المال', a: ['فقير'] },
+        { q: 'من يتولى شؤون وزارة في الدولة', a: ['وزير'] },
+        { q: 'قماش ناعم يُستخرج من دودة القز', a: ['حرير'] }
+      ]},
+      { id: 'as', suffix: 'اس', display: '- ا س', items: [
+        { q: 'فاكهة استوائية ذات قشرة شوكية وتاج أخضر', a: ['أناناس', 'اناناس'] },
+        { q: 'ما يرتديه الإنسان من ثياب', a: ['لباس'] },
+        { q: 'معدن لونه بني محمر يُستخدم في الأسلاك', a: ['نحاس'] },
+        { q: 'القاعدة التي يُبنى عليها الشيء', a: ['أساس', 'اساس'] },
+        { q: 'مجموع البشر على وجه الأرض', a: ['الناس', 'ناس'] },
+        { q: 'أداة لمعرفة الطول أو الوزن أو الحرارة', a: ['مقياس'] },
+        { q: 'إناء يُشرب فيه الماء أو الشاي', a: ['كأس', 'كاس'] },
+        { q: 'أعلى جزء في جسم الإنسان', a: ['رأس', 'راس'] }
+      ]},
+      { id: 'wb', suffix: 'وب', display: '- و ب', items: [
+        { q: 'من الاتجاهات الأربعة الرئيسية', a: ['جنوب'] },
+        { q: 'ما يرتديه الرجل في الخليج العربي', a: ['ثوب'] },
+        { q: 'جمع قلب', a: ['قلوب'] },
+        { q: 'يندم على المعصية ويرجع إلى الله', a: ['يتوب'] },
+        { q: 'اختفاء الشمس في نهاية النهار', a: ['غروب'] },
+        { q: 'حاسوب محمول أو مكتبي يسمى باللغة العربية', a: ['حاسوب'] },
+        { q: 'القمح والرز والذرة من', a: ['الحبوب', 'حبوب'] },
+        { q: 'نبي ابن نبي ابن نبي', a: ['يعقوب'] }
+      ]}
+    ];
+
+    // ==========================================
+‎    // 2. تهيئة Firebase — ضع بيانات مشروعك هنا
+    // ==========================================
+
+    // 🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽🔽
+‎    // ضع هنا بيانات مشروع Firebase الخاص بك (من Firebase Console)
+   
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyA_yQBSYZ_enl4n3J23SxoQ4TRAPpGNKu8",
+  authDomain: "my-simple-proj.firebaseapp.com",
+  projectId: "my-simple-proj",
+  storageBucket: "my-simple-proj.firebasestorage.app",
+  messagingSenderId: "584981725691",
+  appId: "1:584981725691:web:d95171247be29dd2d68b5e"
+};
+
+    // 🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼🔼
+
+‎    // معرّف ثابت يستخدم في مسار الغرف داخل Firestore
+    const APP_ID = 'last-two-letters-game';
+
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+
+    async function initFirebase() {
+      try {
+‎        // إذا لم تُضبط الإعدادات بعد، لا نحاول الاتصال
+        if (!FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey === 'ضع_هنا_apiKey') {
+          console.warn('⚠️ لم يتم إدخال إعدادات Firebase بعد — وضع اللعب المحلي فقط متاح.');
+          return;
+        }
+
+        const app = initializeApp(FIREBASE_CONFIG);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        const cred = await signInAnonymously(auth);
+        currentUser = cred.user;
+        console.log('✅ تم الاتصال بـ Firebase، UID:', currentUser.uid);
+      } catch (err) {
+        console.error('❌ فشل تهيئة Firebase:', err);
+        showToast('تعذر الاتصال بخادم اللعب المباشر. استخدم وضع اللعب السريع.', 'error');
+      }
+    }
+
+    // ==========================================
+‎    // 3. إدارة الصوتيات
+    // ==========================================
+    let soundEnabled = true;
+    let synth = null;
+
+    function playSound(type) {
+      if (!soundEnabled) return;
+      try {
+        if (!synth && typeof Tone !== 'undefined') {
+          synth = new Tone.PolySynth(Tone.Synth).toDestination();
+          synth.volume.value = -8;
+        }
+        if (!synth) return;
+        if (Tone.context.state !== 'running') Tone.start();
+        const now = Tone.now();
+        if (type === 'correct') synth.triggerAttackRelease(['C5', 'E5', 'G5'], '16n', now);
+        else if (type === 'tick') synth.triggerAttackRelease('A4', '32n', now);
+        else if (type === 'go') synth.triggerAttackRelease(['C5', 'G5', 'C6'], '8n', now);
+        else if (type === 'win') {
+          synth.triggerAttackRelease('C5', '16n', now);
+          synth.triggerAttackRelease('E5', '16n', now + 0.12);
+          synth.triggerAttackRelease('G5', '16n', now + 0.24);
+          synth.triggerAttackRelease('C6', '4n', now + 0.36);
+        } else if (type === 'hint') synth.triggerAttackRelease('D4', '16n', now);
+      } catch (e) {}
+    }
+
+    // ==========================================
+‎    // 4. تطبيع النصوص العربية
+    // ==========================================
+    function normalizeArabic(text) {
+      if (!text) return { raw: '', noAl: '' };
+      let clean = text.trim()
+        .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
+        .replace(/[أإآٱ]/g, 'ا')
+        .replace(/ؤ/g, 'و')
+        .replace(/ئ/g, 'ي')
+        .replace(/ة/g, 'ه')
+        .replace(/\s+/g, ' ');
+      const withoutAl = clean.startsWith('ال') && clean.length > 3 ? clean.slice(2) : clean;
+      return { raw: clean, noAl: withoutAl };
+    }
+
+    function checkAnswerMatch(userInput, validAnswers) {
+      const userNorm = normalizeArabic(userInput);
+      if (!userNorm.raw) return false;
+      return validAnswers.some(ans => {
+        const ansNorm = normalizeArabic(ans);
+        return (
+          userNorm.raw === ansNorm.raw ||
+          userNorm.noAl === ansNorm.noAl ||
+          userNorm.raw === ansNorm.noAl ||
+          userNorm.noAl === ansNorm.raw
+        );
+      });
+    }
+
+    // ==========================================
+‎    // 5. حالة اللعبة
+    // ==========================================
+    let state = {
+      mode: 'online',
+      roomCode: null,
+      myTeam: null,
+      unsubscribeRoom: null,
+      roomData: null,
+      localData: {
+        team1Name: 'الفريق الأول',
+        team2Name: 'الفريق الثاني',
+        team1Score: 0,
+        team2Score: 0,
+        usedGroups: [],
+        activeGroupId: null,
+        currentTurn: 'team1',
+        team1Time: 0,
+        team1Solved: 0,
+        team2Time: 0,
+        team2Solved: 0
+      },
+      currentGroup: null,
+      solvedIndices: new Set(),
+      hintsUsed: new Set(),
+      penaltySeconds: 0,
+      roundStartTime: null,
+      timerInterval: null,
+      isRoundActive: false
+    };
+
+    // ==========================================
+‎    // 6. أدوات الواجهة
+    // ==========================================
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const colors = {
+        info: 'bg-slate-800 border-sky-500/50 text-white',
+        success: 'bg-emerald-950/95 border-emerald-500 text-emerald-200',
+        error: 'bg-rose-950/95 border-rose-500 text-rose-200',
+        warn: 'bg-amber-950/95 border-amber-500 text-amber-200'
+      };
+      toast.className = `pointer-events-auto px-4 py-3 rounded-2xl border shadow-xl text-sm font-bold text-center animate-pop ${colors[type] || colors.info}`;
+      toast.textContent = msg;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    function switchScreen(screenId) {
+      ['screen-setup', 'screen-lobby', 'screen-game', 'screen-results'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+      document.getElementById(screenId).classList.remove('hidden');
+      const homeBtn = document.getElementById('home-btn');
+      if (screenId === 'screen-setup') homeBtn.classList.add('hidden');
+      else homeBtn.classList.remove('hidden');
+    }
+
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    // ==========================================
+‎    // 7. شبكة بطاقات الحرفين
+    // ==========================================
+    function renderLettersGrid(usedGroupIds = [], canSelect = true) {
+      const grid = document.getElementById('letters-grid');
+      grid.innerHTML = '';
+      QUIZ_GROUPS.forEach(group => {
+        const isUsed = usedGroupIds.includes(group.id);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.disabled = !canSelect;
+        btn.className = `letter-card relative p-4 rounded-2xl border-2 flex flex-col items-center justify-center text-center ${
+          isUsed
+            ? 'bg-slate-900/50 border-slate-800 text-slate-500'
+            : 'bg-slate-800/80 border-slate-700 text-white hover:bg-slate-800'
+        } ${!canSelect ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`;
+        btn.innerHTML = `
+          ${isUsed ? '<span class="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">لُعبت ✓</span>' : ''}
+          <span class="text-xs text-slate-400 mb-1">ينتهي بـ</span>
+          <span class="text-2xl sm:text-3xl font-black ${isUsed ? 'text-slate-500' : 'text-amber-400'} tracking-wider">${group.display}</span>
+          <span class="text-[11px] text-slate-400 mt-1.5 font-semibold">${group.items.length} أسئلة</span>
+        `;
+        btn.addEventListener('click', () => handleSelectGroup(group.id));
+        grid.appendChild(btn);
+      });
+    }
+
+    // ==========================================
+‎    // 8. إدارة الغرف (Firebase)
+    // ==========================================
+    function generateRoomCode() {
+      return Math.floor(1000 + Math.random() * 9000).toString();
+    }
+
+    function getRoomRef(code) {
+      return doc(db, 'artifacts', APP_ID, 'public', 'data', 'rooms', code);
+    }
+
+    async function createOnlineRoom() {
+      if (!db || !currentUser) {
+        showToast('لم يتم الاتصال بالخادم بعد. تأكد من إعدادات Firebase، أو استخدم اللعب المحلي.', 'warn');
+        return;
+      }
+      const teamName = document.getElementById('create-team-name').value.trim() || 'الفريق الأول';
+      const code = generateRoomCode();
+      const initialRoom = {
+        code,
+        status: 'lobby',
+        roundNumber: 1,
+        activeGroupId: null,
+        roundStartTimestamp: null,
+        usedGroups: [],
+        team1: {
+          uid: currentUser.uid,
+          name: teamName,
+          score: 0,
+          solvedCount: 0,
+          finishTime: null
+        },
+        team2: null,
+        roundWinner: null
+      };
+      try {
+        await setDoc(getRoomRef(code), initialRoom);
+        state.mode = 'online';
+        state.roomCode = code;
+        state.myTeam = 'team1';
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set('room', code);
+          window.history.replaceState({}, '', url.toString());
+        } catch (e) {}
+        listenToRoom(code);
+        showToast(`تم إنشاء الغرفة بنجاح! الرمز: ${code}`, 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('حدث خطأ أثناء إنشاء الغرفة. جرب وضع اللعب السريع.', 'error');
+      }
+    }
+
+    async function joinOnlineRoom(codeInput) {
+      if (!db || !currentUser) {
+        showToast('لم يتم الاتصال بالخادم بعد. تأكد من إعدادات Firebase.', 'warn');
+        return;
+      }
+      const code = (codeInput || document.getElementById('join-room-code').value).trim().toUpperCase();
+      const teamName = document.getElementById('join-team-name').value.trim() || 'الفريق الثاني';
+      if (!code || code.length < 4) {
+        showToast('يرجى إدخال رمز الغرفة الصحيح.', 'error');
+        return;
+      }
+      try {
+        const snap = await getDoc(getRoomRef(code));
+        if (!snap.exists()) {
+          showToast('لم يتم العثور على غرفة بهذا الرمز!', 'error');
+          return;
+        }
+        const data = snap.data();
+        state.mode = 'online';
+        state.roomCode = code;
+        if (data.team1 && data.team1.uid === currentUser.uid) {
+          state.myTeam = 'team1';
+        } else if (data.team2 && data.team2.uid === currentUser.uid) {
+          state.myTeam = 'team2';
+        } else if (!data.team2) {
+          state.myTeam = 'team2';
+          await updateDoc(getRoomRef(code), {
+            team2: {
+              uid: currentUser.uid,
+              name: teamName,
+              score: 0,
+              solvedCount: 0,
+              finishTime: null
+            }
+          });
+        } else {
+          showToast('عذراً، الغرفة مكتملة بفريقين بالفعل!', 'error');
+          return;
+        }
+        listenToRoom(code);
+        showToast('تم الانضمام إلى الغرفة بنجاح!', 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('تعذر الانضمام للغرفة.', 'error');
+      }
+    }
+
+    function listenToRoom(code) {
+      if (state.unsubscribeRoom) state.unsubscribeRoom();
+      state.unsubscribeRoom = onSnapshot(
+        getRoomRef(code),
+        (snapshot) => {
+          if (!snapshot.exists()) return;
+          const prevData = state.roomData;
+          const data = snapshot.data();
+          state.roomData = data;
+          syncUIWithOnlineRoom(data, prevData);
+        },
+        (error) => {
+          console.error('Room listener error:', error);
+          showToast('انقطع الاتصال المباشر بالغرفة.', 'error');
+        }
+      );
+    }
+
+    function syncUIWithOnlineRoom(data, prevData) {
+      const t1Name = data.team1?.name || 'الفريق الأول';
+      const t2Name = data.team2?.name || 'بانتظار الفريق الثاني...';
+      document.getElementById('lobby-t1-name').textContent = t1Name;
+      document.getElementById('lobby-t1-score').textContent = data.team1?.score || 0;
+      document.getElementById('lobby-t2-name').textContent = t2Name;
+      document.getElementById('lobby-t2-score').textContent = data.team2?.score || 0;
+      document.getElementById('display-room-code').textContent = data.code;
+      document.getElementById('room-share-box').classList.remove('hidden');
+
+      const banner = document.getElementById('lobby-status-banner');
+      if (!data.team2) {
+        banner.textContent = '⏳ في انتظار دخول الفريق الثاني... شاركوا رابط الدعوة أو رمز الغرفة أعلاه!';
+        banner.className = 'mt-4 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm font-bold text-center';
+      } else {
+        banner.textContent = `✅ الفريقان جاهزان (${t1Name} ضد ${t2Name})! اختاروا الحرفين لبدء السباق فوراً!`;
+        banner.className = 'mt-4 p-3.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-200 text-sm font-bold text-center';
+      }
+
+      if (data.status === 'playing' && state.currentGroup) {
+        const totalQ = state.currentGroup.items.length;
+        const t1Solved = data.team1?.solvedCount || 0;
+        const t2Solved = data.team2?.solvedCount || 0;
+        document.getElementById('game-t1-name').textContent = t1Name;
+        document.getElementById('game-t1-count').textContent = `${t1Solved} / ${totalQ}`;
+        document.getElementById('game-t1-bar').style.width = `${(t1Solved / totalQ) * 100}%`;
+        document.getElementById('game-t2-name').textContent = t2Name;
+        document.getElementById('game-t2-count').textContent = `${t2Solved} / ${totalQ}`;
+        document.getElementById('game-t2-bar').style.width = `${(t2Solved / totalQ) * 100}%`;
+      }
+
+      if (data.status === 'lobby') {
+        stopRoundTimer();
+        renderLettersGrid(data.usedGroups || [], true);
+        switchScreen('screen-lobby');
+      } else if (data.status === 'playing') {
+        const isNewRound = !prevData || prevData.status !== 'playing' || prevData.activeGroupId !== data.activeGroupId;
+        if (isNewRound && data.activeGroupId) startRoundSequence(data.activeGroupId);
+      } else if (data.status === 'finished') {
+        stopRoundTimer();
+        renderOnlineResults(data);
+      }
+    }
+
+    // ==========================================
+‎    // 9. اختيار الحرفين وبدء الجولة
+    // ==========================================
+    async function handleSelectGroup(groupId) {
+      if (state.mode === 'online') {
+        if (!state.roomData?.team2) {
+          showToast('انتظر دخول الفريق الثاني أولاً أو شاركه رابط الغرفة!', 'warn');
+          return;
+        }
+        try {
+          const used = Array.from(new Set([...(state.roomData.usedGroups || []), groupId]));
+          await updateDoc(getRoomRef(state.roomCode), {
+            status: 'playing',
+            activeGroupId: groupId,
+            roundStartTimestamp: Date.now(),
+            usedGroups: used,
+            roundWinner: null,
+            'team1.solvedCount': 0,
+            'team1.finishTime': null,
+            'team2.solvedCount': 0,
+            'team2.finishTime': null
+          });
+        } catch (err) {
+          console.error(err);
+          showToast('حدث خطأ في بدء الجولة.', 'error');
+        }
+      } else {
+        state.localData.activeGroupId = groupId;
+        state.localData.currentTurn = 'team1';
+        state.localData.team1Time = 0;
+        state.localData.team1Solved = 0;
+        state.localData.team2Time = 0;
+        state.localData.team2Solved = 0;
+        if (!state.localData.usedGroups.includes(groupId)) state.localData.usedGroups.push(groupId);
+        startRoundSequence(groupId);
+      }
+    }
+
+    function startRoundSequence(groupId) {
+      const group = QUIZ_GROUPS.find(g => g.id === groupId);
+      if (!group) return;
+      state.currentGroup = group;
+      state.solvedIndices = new Set();
+      state.hintsUsed = new Set();
+      state.penaltySeconds = 0;
+      state.isRoundActive = false;
+      stopRoundTimer();
+
+      const cdScreen = document.getElementById('screen-countdown');
+      const cdNum = document.getElementById('countdown-number');
+      const cdLetters = document.getElementById('countdown-letters');
+      const cdLabel = document.getElementById('countdown-team-label');
+
+      cdLetters.textContent = group.display;
+      if (state.mode === 'local') {
+        const turnName = state.localData.currentTurn === 'team1' ? state.localData.team1Name : state.localData.team2Name;
+        cdLabel.textContent = `دور: ${turnName} (يمنع نظر الفريق المنافس!)`;
+      } else {
+        const myName = state.myTeam === 'team1' ? state.roomData?.team1?.name : state.roomData?.team2?.name;
+        cdLabel.textContent = `استعدوا يا ${myName || 'أبطال'}!`;
+      }
+
+      cdScreen.classList.remove('hidden');
+      let count = 3;
+      cdNum.textContent = count;
+      playSound('tick');
+
+      const interval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          cdNum.textContent = count;
+          playSound('tick');
+        } else if (count === 0) {
+          cdNum.textContent = 'انطلق!';
+          playSound('go');
+        } else {
+          clearInterval(interval);
+          cdScreen.classList.add('hidden');
+          beginActiveGameplay();
+        }
+      }, 650);
+    }
+
+    // ==========================================
+‎    // 10. شاشة التحدي والتحقق
+    // ==========================================
+    function beginActiveGameplay() {
+      switchScreen('screen-game');
+      state.isRoundActive = true;
+      state.roundStartTime = Date.now();
+      const group = state.currentGroup;
+      document.getElementById('game-active-letters').textContent = group.display;
+
+      if (state.mode === 'local') {
+        const isT1 = state.localData.currentTurn === 'team1';
+        const activeName = isT1 ? state.localData.team1Name : state.localData.team2Name;
+        const badge = document.getElementById('current-turn-badge');
+        badge.textContent = isT1 ? 'الدور الأول' : 'الدور الثاني (الحسم)';
+        badge.className = `inline-block px-2.5 py-0.5 rounded-md text-xs font-bold mb-0.5 ${
+          isT1 ? 'bg-sky-500/20 text-sky-300' : 'bg-orange-500/20 text-orange-300'
+        }`;
+        document.getElementById('game-prompt-title').textContent = `دور ${activeName} — أجب بأسرع وقت!`;
+        document.getElementById('game-t1-name').textContent = state.localData.team1Name;
+        document.getElementById('game-t2-name').textContent = state.localData.team2Name;
+        document.getElementById('game-t1-count').textContent = `${state.localData.team1Solved} / ${group.items.length}`;
+        document.getElementById('game-t2-count').textContent = `${state.localData.team2Solved} / ${group.items.length}`;
+        document.getElementById('game-t1-bar').style.width = `${(state.localData.team1Solved / group.items.length) * 100}%`;
+        document.getElementById('game-t2-bar').style.width = `${(state.localData.team2Solved / group.items.length) * 100}%`;
+      } else {
+        const myName = state.myTeam === 'team1' ? state.roomData?.team1?.name : state.roomData?.team2?.name;
+        document.getElementById('current-turn-badge').textContent = 'سباق مباشر 🔥';
+        document.getElementById('game-prompt-title').textContent = `فريقك: ${myName} — اسبق المنافس!`;
+      }
+
+      const listEl = document.getElementById('questions-list');
+      listEl.innerHTML = '';
+
+      group.items.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.id = `q-row-${index}`;
+        row.className = 'glass-panel rounded-2xl p-4 border border-slate-700/80 transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+        row.innerHTML = `
+          <div class="flex items-start sm:items-center gap-3 flex-1">
+            <span id="q-num-${index}" class="w-8 h-8 rounded-xl bg-slate-800 border border-slate-600 flex items-center justify-center text-sm font-black text-slate-300 shrink-0">${index + 1}</span>
+            <div>
+              <p class="text-base sm:text-lg font-bold text-white leading-snug">${item.q}</p>
+              <span id="q-hint-text-${index}" class="hidden text-xs text-amber-300 font-bold mt-1 block"></span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <div class="relative flex-1 sm:w-56">
+              <input type="text" id="q-input-${index}" data-index="${index}" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="ينتهي بـ (${group.suffix})..." class="w-full pl-12 pr-3.5 py-2.5 rounded-xl bg-slate-900/90 border-2 border-slate-600 text-white font-bold text-base focus:outline-none focus:border-sky-400 transition" />
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-amber-400/80 pointer-events-none select-none">ـ${group.suffix}</span>
+            </div>
+            <button type="button" id="q-hint-btn-${index}" title="كشف أول حرف (+5 ثوانٍ)" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-amber-950/60 border border-slate-600 hover:border-amber-500/50 text-amber-300 text-xs font-bold shrink-0 transition">💡 تلميح</button>
+            <button type="button" id="q-skip-btn-${index}" title="تخطي السؤال (+10 ثوانٍ)" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-950/60 border border-slate-600 hover:border-rose-500/50 text-rose-300 text-xs font-bold shrink-0 transition">⏭️ تخطي</button>
+          </div>
+        `;
+        listEl.appendChild(row);
+
+        document.getElementById(`q-input-${index}`).addEventListener('input', (e) => handleAnswerInput(index, e.target.value));
+        document.getElementById(`q-hint-btn-${index}`).addEventListener('click', () => handleUseHint(index));
+        document.getElementById(`q-skip-btn-${index}`).addEventListener('click', () => handleSkipQuestion(index));
+      });
+
+      setTimeout(() => {
+        const firstInput = document.getElementById('q-input-0');
+        if (firstInput) firstInput.focus();
+      }, 100);
+
+      startRoundTimer();
+    }
+
+    function startRoundTimer() {
+      stopRoundTimer();
+      const timerEl = document.getElementById('game-timer');
+      timerEl.textContent = '00:00';
+      state.timerInterval = setInterval(() => {
+        if (!state.isRoundActive) return;
+        const elapsed = Math.floor((Date.now() - state.roundStartTime) / 1000) + state.penaltySeconds;
+        timerEl.textContent = formatTime(elapsed);
+      }, 250);
+    }
+
+    function stopRoundTimer() {
+      if (state.timerInterval) {
+        clearInterval(state.timerInterval);
+        state.timerInterval = null;
+      }
+    }
+
+    function handleUseHint(index) {
+      if (!state.isRoundActive || state.solvedIndices.has(index) || state.hintsUsed.has(index)) return;
+      state.hintsUsed.add(index);
+      state.penaltySeconds += 5;
+      playSound('hint');
+      const primaryAns = state.currentGroup.items[index].a[0];
+      const firstChar = primaryAns.charAt(0);
+      const length = primaryAns.length;
+      const hintText = document.getElementById(`q-hint-text-${index}`);
+      hintText.textContent = `تلميح: تبدأ بحرف «${firstChar}» وتتكون من ${length} أحرف (+5 ثوانٍ)`;
+      hintText.classList.remove('hidden');
+      const hintBtn = document.getElementById(`q-hint-btn-${index}`);
+      hintBtn.disabled = true;
+      hintBtn.classList.add('opacity-40', 'cursor-not-allowed');
+      document.getElementById(`q-input-${index}`).focus();
+    }
+
+    async function handleSkipQuestion(index) {
+      if (!state.isRoundActive || state.solvedIndices.has(index)) return;
+      state.penaltySeconds += 10;
+      playSound('hint');
+      showToast('تم تخطي السؤال (+10 ثوانٍ عقوبة زمنية)', 'warn');
+      await markQuestionResolved(index, true);
+    }
+
+    async function handleAnswerInput(index, value) {
+      if (!state.isRoundActive || state.solvedIndices.has(index)) return;
+      const item = state.currentGroup.items[index];
+      if (!checkAnswerMatch(value, item.a)) return;
+      playSound('correct');
+      await markQuestionResolved(index, false);
+    }
+
+    async function markQuestionResolved(index, wasSkipped) {
+      state.solvedIndices.add(index);
+      const item = state.currentGroup.items[index];
+      const row = document.getElementById(`q-row-${index}`);
+      const numBadge = document.getElementById(`q-num-${index}`);
+      const inputEl = document.getElementById(`q-input-${index}`);
+      const hintBtn = document.getElementById(`q-hint-btn-${index}`);
+      const skipBtn = document.getElementById(`q-skip-btn-${index}`);
+
+      row.classList.remove('border-slate-700/80');
+      if (wasSkipped) {
+        row.classList.add('border-amber-500/70', 'bg-amber-950/20');
+        numBadge.className = 'w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center text-sm font-black shrink-0';
+        numBadge.textContent = '⏭';
+        inputEl.classList.remove('border-slate-600', 'focus:border-sky-400');
+        inputEl.classList.add('border-amber-500/70', 'bg-amber-950/40', 'text-amber-300');
+      } else {
+        row.classList.add('border-emerald-500', 'bg-emerald-950/30', 'solved-row');
+        numBadge.className = 'w-8 h-8 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center text-sm font-black shrink-0';
+        numBadge.textContent = '✓';
+        inputEl.classList.remove('border-slate-600', 'focus:border-sky-400');
+        inputEl.classList.add('border-emerald-500', 'bg-emerald-950/60', 'text-emerald-300');
+      }
+      inputEl.value = item.a[0];
+      inputEl.disabled = true;
+      if (hintBtn) hintBtn.classList.add('hidden');
+      if (skipBtn) skipBtn.classList.add('hidden');
+
+      const totalQ = state.currentGroup.items.length;
+      const solvedCount = state.solvedIndices.size;
+
+      if (state.mode === 'online') {
+        const myField = state.myTeam;
+        const pct = (solvedCount / totalQ) * 100;
+        if (myField === 'team1') {
+          document.getElementById('game-t1-count').textContent = `${solvedCount} / ${totalQ}`;
+          document.getElementById('game-t1-bar').style.width = `${pct}%`;
+        } else {
+          document.getElementById('game-t2-count').textContent = `${solvedCount} / ${totalQ}`;
+          document.getElementById('game-t2-bar').style.width = `${pct}%`;
+        }
+        const elapsed = Number(((Date.now() - state.roundStartTime) / 1000 + state.penaltySeconds).toFixed(1));
+        if (solvedCount === totalQ) {
+          state.isRoundActive = false;
+          stopRoundTimer();
+          const currentScore = state.roomData?.[myField]?.score || 0;
+          const updates = {
+            [`${myField}.solvedCount`]: solvedCount,
+            [`${myField}.finishTime`]: elapsed
+          };
+          if (!state.roomData?.roundWinner) {
+            updates.status = 'finished';
+            updates.roundWinner = myField;
+            updates[`${myField}.score`] = currentScore + 1;
+          }
+          await updateDoc(getRoomRef(state.roomCode), updates);
+          return;
+        } else {
+          updateDoc(getRoomRef(state.roomCode), {
+            [`${myField}.solvedCount`]: solvedCount
+          }).catch(() => {});
+        }
+      } else {
+        const isT1 = state.localData.currentTurn === 'team1';
+        const pct = (solvedCount / totalQ) * 100;
+        if (isT1) {
+          state.localData.team1Solved = solvedCount;
+          document.getElementById('game-t1-count').textContent = `${solvedCount} / ${totalQ}`;
+          document.getElementById('game-t1-bar').style.width = `${pct}%`;
+        } else {
+          state.localData.team2Solved = solvedCount;
+          document.getElementById('game-t2-count').textContent = `${solvedCount} / ${totalQ}`;
+          document.getElementById('game-t2-bar').style.width = `${pct}%`;
+        }
+        if (solvedCount === totalQ) {
+          state.isRoundActive = false;
+          stopRoundTimer();
+          const elapsed = Number(((Date.now() - state.roundStartTime) / 1000 + state.penaltySeconds).toFixed(1));
+          if (isT1) {
+            state.localData.team1Time = elapsed;
+            showToast(`أنهى ${state.localData.team1Name} الأسئلة في ${elapsed} ثانية! الآن دور ${state.localData.team2Name}`, 'success');
+            setTimeout(() => {
+              state.localData.currentTurn = 'team2';
+              startRoundSequence(state.localData.activeGroupId);
+            }, 1400);
+          } else {
+            state.localData.team2Time = elapsed;
+            renderLocalResults();
+          }
+          return;
+        }
+      }
+
+      for (let i = 0; i < totalQ; i++) {
+        const nextIdx = (index + 1 + i) % totalQ;
+        if (!state.solvedIndices.has(nextIdx)) {
+          const nextInput = document.getElementById(`q-input-${nextIdx}`);
+          if (nextInput) {
+            nextInput.focus();
+            nextInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          break;
+        }
+      }
+    }
+
+    // ==========================================
+‎    // 11. النتائج والاحتفال
+    // ==========================================
+    function triggerConfetti() {
+      if (typeof confetti === 'function') {
+        confetti({ particleCount: 90, spread: 75, origin: { y: 0.6 } });
+      }
+    }
+
+    function populateAnswersReview() {
+      const container = document.getElementById('round-answers-review');
+      container.innerHTML = '';
+      if (!state.currentGroup) return;
+      state.currentGroup.items.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-slate-800/70';
+        div.innerHTML = `
+          <span class="text-slate-300 text-xs sm:text-sm">${idx + 1}. ${item.q}</span>
+          <span class="font-extrabold text-emerald-400 text-xs sm:text-sm">${item.a[0]}</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function renderOnlineResults(data) {
+      playSound('win');
+      triggerConfetti();
+      const t1 = data.team1 || { name: 'الفريق الأول', solvedCount: 0, finishTime: null };
+      const t2 = data.team2 || { name: 'الفريق الثاني', solvedCount: 0, finishTime: null };
+      const totalQ = state.currentGroup ? state.currentGroup.items.length : 8;
+      const winnerName = data.roundWinner === 'team1' ? t1.name : t2.name;
+      document.getElementById('winner-headline').textContent = `🏆 فاز ${winnerName}!`;
+      document.getElementById('winner-subtext').textContent = 'أنهى جميع الأسئلة أولاً وحسم نقطة الجولة!';
+      document.getElementById('res-t1-name').textContent = t1.name;
+      document.getElementById('res-t1-time').textContent = t1.finishTime ? `${t1.finishTime} ث` : 'لم يكتمل';
+      document.getElementById('res-t1-solved').textContent = `أجاب على ${t1.solvedCount || 0} من ${totalQ}`;
+      document.getElementById('res-t2-name').textContent = t2.name;
+      document.getElementById('res-t2-time').textContent = t2.finishTime ? `${t2.finishTime} ث` : 'لم يكتمل';
+      document.getElementById('res-t2-solved').textContent = `أجاب على ${t2.solvedCount || 0} من ${totalQ}`;
+      populateAnswersReview();
+      switchScreen('screen-results');
+    }
+
+    function renderLocalResults() {
+      playSound('win');
+      triggerConfetti();
+      const ld = state.localData;
+      const totalQ = state.currentGroup.items.length;
+      let headline = '';
+      if (ld.team1Time < ld.team2Time) {
+        ld.team1Score += 1;
+        headline = `🏆 فاز ${ld.team1Name}!`;
+      } else if (ld.team2Time < ld.team1Time) {
+        ld.team2Score += 1;
+        headline = `🏆 فاز ${ld.team2Name}!`;
+      } else {
+        headline = '🤝 تعادل مذهل في نفس الثانية!';
+      }
+      document.getElementById('winner-headline').textContent = headline;
+      document.getElementById('winner-subtext').textContent = `الفارق الزمني: ${Math.abs(ld.team1Time - ld.team2Time).toFixed(1)} ثانية`;
+      document.getElementById('res-t1-name').textContent = ld.team1Name;
+      document.getElementById('res-t1-time').textContent = `${ld.team1Time} ث`;
+      document.getElementById('res-t1-solved').textContent = `أجاب على ${totalQ} من ${totalQ}`;
+      document.getElementById('res-t2-name').textContent = ld.team2Name;
+      document.getElementById('res-t2-time').textContent = `${ld.team2Time} ث`;
+      document.getElementById('res-t2-solved').textContent = `أجاب على ${totalQ} من ${totalQ}`;
+      populateAnswersReview();
+      switchScreen('screen-results');
+    }
+
+    // ==========================================
+‎    // 12. ربط الأحداث
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', async () => {
+      await initFirebase();
+
+      const modeOnlineBtn = document.getElementById('mode-online-btn');
+      const modeLocalBtn = document.getElementById('mode-local-btn');
+      const onlineBox = document.getElementById('online-setup-box');
+      const localBox = document.getElementById('local-setup-box');
+
+      modeOnlineBtn.addEventListener('click', () => {
+        state.mode = 'online';
+        modeOnlineBtn.className = 'mode-selector active flex flex-col items-start p-4 rounded-2xl border-2 border-sky-500 bg-sky-500/10 text-right transition';
+        modeLocalBtn.className = 'mode-selector flex flex-col items-start p-4 rounded-2xl border-2 border-slate-700 bg-slate-800/60 hover:border-slate-500 text-right transition';
+        onlineBox.classList.remove('hidden');
+        localBox.classList.add('hidden');
+      });
+
+      modeLocalBtn.addEventListener('click', () => {
+        state.mode = 'local';
+        modeLocalBtn.className = 'mode-selector active flex flex-col items-start p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-500/10 text-right transition';
+        modeOnlineBtn.className = 'mode-selector flex flex-col items-start p-4 rounded-2xl border-2 border-slate-700 bg-slate-800/60 hover:border-slate-500 text-right transition';
+        localBox.classList.remove('hidden');
+        onlineBox.classList.add('hidden');
+      });
+
+      document.getElementById('create-room-btn').addEventListener('click', createOnlineRoom);
+      document.getElementById('join-room-btn').addEventListener('click', () => joinOnlineRoom());
+
+      document.getElementById('start-local-btn').addEventListener('click', () => {
+        state.mode = 'local';
+        state.localData.team1Name = document.getElementById('local-team1-name').value.trim() || 'الفريق الأول';
+        state.localData.team2Name = document.getElementById('local-team2-name').value.trim() || 'الفريق الثاني';
+        state.localData.team1Score = 0;
+        state.localData.team2Score = 0;
+        state.localData.usedGroups = [];
+        updateLocalLobbyUI();
+        switchScreen('screen-lobby');
+      });
+
+      function updateLocalLobbyUI() {
+        document.getElementById('lobby-t1-name').textContent = state.localData.team1Name;
+        document.getElementById('lobby-t1-score').textContent = state.localData.team1Score;
+        document.getElementById('lobby-t2-name').textContent = state.localData.team2Name;
+        document.getElementById('lobby-t2-score').textContent = state.localData.team2Score;
+        document.getElementById('room-share-box').classList.add('hidden');
+        document.getElementById('lobby-status-banner').textContent = 'اختر الحرفين: يبدأ الفريق الأول أولاً ثم يتبعه الفريق الثاني لمقارنة الزمن!';
+        renderLettersGrid(state.localData.usedGroups, true);
+      }
+
+      document.getElementById('copy-link-btn').addEventListener('click', () => {
+        const url = new URL(window.location.href);
+        if (state.roomCode) url.searchParams.set('room', state.roomCode);
+        const shareText = `انضم معي في مسابقة "آخر حرفين"! رمز الغرفة: ${state.roomCode}\n${url.toString()}`;
+        const tempInput = document.createElement('textarea');
+        tempInput.value = shareText;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+        showToast('تم نسخ رابط الدعوة ورمز الغرفة! أرسله للفريق المنافس.', 'success');
+      });
+
+      document.getElementById('random-letters-btn').addEventListener('click', () => {
+        const used = state.mode === 'online' ? (state.roomData?.usedGroups || []) : state.localData.usedGroups;
+        const available = QUIZ_GROUPS.filter(g => !used.includes(g.id));
+        const pool = available.length > 0 ? available : QUIZ_GROUPS;
+        const randomGroup = pool[Math.floor(Math.random() * pool.length)];
+        handleSelectGroup(randomGroup.id);
+      });
+
+      document.getElementById('next-round-btn').addEventListener('click', async () => {
+        document.getElementById('round-answers-review').classList.add('hidden');
+        if (state.mode === 'online') {
+          await updateDoc(getRoomRef(state.roomCode), {
+            status: 'lobby',
+            activeGroupId: null,
+            roundWinner: null
+          });
+        } else {
+          updateLocalLobbyUI();
+          switchScreen('screen-lobby');
+        }
+      });
+
+      document.getElementById('toggle-answers-btn').addEventListener('click', () => {
+        document.getElementById('round-answers-review').classList.toggle('hidden');
+      });
+
+      document.getElementById('sound-toggle-btn').addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        document.getElementById('sound-on-icon').classList.toggle('hidden', !soundEnabled);
+        document.getElementById('sound-off-icon').classList.toggle('hidden', soundEnabled);
+        showToast(soundEnabled ? 'تم تفعيل المؤثرات الصوتية' : 'تم كتم الصوت');
+      });
+
+      document.getElementById('home-btn').addEventListener('click', () => {
+        stopRoundTimer();
+        if (state.unsubscribeRoom) {
+          state.unsubscribeRoom();
+          state.unsubscribeRoom = null;
+        }
+        state.roomCode = null;
+        state.roomData = null;
+        switchScreen('screen-setup');
+      });
+
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const roomParam = params.get('room');
+        if (roomParam) {
+          document.getElementById('join-room-code').value = roomParam;
+          showToast(`تم اكتشاف رمز الغرفة (${roomParam}) من الرابط! أدخل اسم فريقك واضغط دخول.`, 'info');
+        }
+      } catch (e) {}
+    });
+  </script>
+</body>
+</html>
